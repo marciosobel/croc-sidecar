@@ -1,0 +1,15 @@
+[package]
+name = "croc-sidecar"
+version = "0.1.0"
+authors = ["Márcio Sobel"]
+description = "A wrapper for the Croc binary"
+repository = "https://github.com/marciosobel/croc-sidecar"
+readme = "readme.md"
+keywords = ["wrapper", "croc", "p2p"]
+license = "MIT"
+edition = "2024"
+
+[dependencies]
+futures-util = "0.3.32"
+thiserror = "2.0.18"
+tokio = { version = "1.51.0", features = ["process", "io-util"] }
