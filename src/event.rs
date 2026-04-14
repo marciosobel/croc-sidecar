@@ -13,7 +13,7 @@ pub struct Progress {
     pub bytes_sent: Option<u64>,
     /// The total number of bytes to transfer, if available.
     pub bytes_total: Option<u64>,
-    /// The current transfer speed, if available.
+    /// The current transfer speed in bytes per second, if available.
     pub speed: Option<f64>,
 }
 
@@ -45,6 +45,8 @@ pub enum CrocEvent {
     Sending(Progress),
     /// A file is currently being received.
     Receiving(Progress),
+    /// The transfer has completed successfully.
+    Done,
     /// An unknown line for the parser has been received.
     Unknown(String),
     /// The process has reached EOF.

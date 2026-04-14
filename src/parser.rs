@@ -13,6 +13,8 @@ pub struct CrocParser<R: AsyncBufRead + Unpin> {
     is_receiving: bool,
     /// Internal buffer for reading lines.
     buf: Vec<u8>,
+    /// The last parsed line.
+    last_line: String,
 }
 
 impl<R: AsyncBufRead + Unpin> CrocParser<R> {
@@ -23,6 +25,7 @@ impl<R: AsyncBufRead + Unpin> CrocParser<R> {
             reader,
             is_receiving: false,
             buf: Vec::new(),
+            last_line: String::new(),
         }
     }
 
@@ -38,11 +41,16 @@ impl<R: AsyncBufRead + Unpin> CrocParser<R> {
                             let raw_line = String::from_utf8_lossy(&self.buf).to_string();
                             self.buf.clear();
                             let line = Self::strip_ansi(&raw_line);
-                            if !line.trim().is_empty() {
+                            if !line.trim().is_empty() && line != self.last_line {
+                                self.last_line = line.clone();
                                 if let Some(event) = self.parse_line(&line) {
                                     return Poll::Ready(Ok(event));
                                 }
                             }
+                        }
+                        if self.last_line != "DONE" {
+                            self.last_line = "DONE".to_string();
+                            return Poll::Ready(Ok(CrocEvent::Done));
                         }
                         return Poll::Ready(Ok(CrocEvent::EOF));
                     }
@@ -54,9 +62,10 @@ impl<R: AsyncBufRead + Unpin> CrocParser<R> {
                         let raw_line = String::from_utf8_lossy(&self.buf).to_string();
                         self.buf.clear();
                         let line = Self::strip_ansi(&raw_line);
-                        if line.trim().is_empty() {
+                        if line.trim().is_empty() || line == self.last_line {
                             continue;
                         }
+                        self.last_line = line.clone();
                         if let Some(event) = self.parse_line(&line) {
                             return Poll::Ready(Ok(event));
                         }
@@ -235,44 +244,67 @@ impl<R: AsyncBufRead + Unpin> CrocParser<R> {
 
     /// Extracts extra progress metadata (bytes sent, bytes total, transfer speed) from trailing parentheses.
     fn parse_metadata(line: &str) -> (Option<u64>, Option<u64>, Option<f64>) {
-        let mut bytes_sent = None;
-        let mut bytes_total = None;
-        let mut speed = None;
+        let paren_idx = match line.rfind('(') {
+            Some(idx) => idx,
+            None => return (None, None, None),
+        };
 
-        if let Some(paren_idx) = line.rfind('(') {
-            let meta_str = line[paren_idx + 1..].trim_end_matches(')').trim();
-            let parts: Vec<&str> = meta_str.splitn(2, ',').collect();
+        let end_paren = line[paren_idx..]
+            .find(')')
+            .unwrap_or(line.len() - paren_idx);
+        let meta_str = line[paren_idx + 1..paren_idx + end_paren].trim();
+        let parts: Vec<&str> = meta_str.splitn(2, ',').collect();
 
-            let bytes_part = parts[0].trim();
-            if let Some(slash_idx) = bytes_part.find('/') {
-                let sent_str = bytes_part[..slash_idx].trim();
-                let total_str = bytes_part[slash_idx + 1..].trim();
+        if parts.len() == 1 && (parts[0].trim().ends_with("/s") || parts[0].trim().ends_with("ps"))
+        {
+            return (None, None, Self::parse_speed(parts[0].trim()));
+        }
 
-                let total_unit = if let Some(idx) = total_str.find(|c: char| c.is_alphabetic()) {
-                    &total_str[idx..]
-                } else {
-                    ""
-                };
+        let (bytes_sent, bytes_total, mut speed) = Self::parse_bytes_part(parts[0].trim());
 
-                let sent_has_unit = sent_str.contains(|c: char| c.is_alphabetic());
-                let sent_to_parse = if !sent_has_unit && !total_unit.is_empty() {
-                    format!("{} {}", sent_str, total_unit)
-                } else {
-                    sent_str.to_string()
-                };
-
-                bytes_sent = Self::parse_bytes(&sent_to_parse);
-                bytes_total = Self::parse_bytes(total_str);
-            } else {
-                bytes_sent = Self::parse_bytes(bytes_part);
-            }
-
-            if parts.len() > 1 {
-                speed = Self::parse_speed(parts[1].trim());
-            }
+        if parts.len() > 1 {
+            speed = Self::parse_speed(parts[1].trim());
         }
 
         (bytes_sent, bytes_total, speed)
+    }
+
+    /// Attempts to extract byte progress and optional speed from a metadata chunk.
+    fn parse_bytes_part(bytes_part: &str) -> (Option<u64>, Option<u64>, Option<f64>) {
+        if let Some(slash_idx) = bytes_part.find('/') {
+            let sent_str = bytes_part[..slash_idx].trim();
+            let total_str = bytes_part[slash_idx + 1..].trim();
+
+            if total_str.starts_with('s') {
+                (None, None, Self::parse_speed(bytes_part))
+            } else {
+                let (sent, total) = Self::parse_fractional_bytes(sent_str, total_str);
+                (sent, total, None)
+            }
+        } else {
+            (Self::parse_bytes(bytes_part), None, None)
+        }
+    }
+
+    /// Parses a fraction like `37 / 268 MB` into absolute byte counts.
+    fn parse_fractional_bytes(sent_str: &str, total_str: &str) -> (Option<u64>, Option<u64>) {
+        let total_unit = if let Some(idx) = total_str.find(|c: char| c.is_alphabetic()) {
+            &total_str[idx..]
+        } else {
+            ""
+        };
+
+        let sent_has_unit = sent_str.contains(|c: char| c.is_alphabetic());
+        let sent_to_parse = if !sent_has_unit && !total_unit.is_empty() {
+            format!("{} {}", sent_str, total_unit)
+        } else {
+            sent_str.to_string()
+        };
+
+        (
+            Self::parse_bytes(&sent_to_parse),
+            Self::parse_bytes(total_str),
+        )
     }
 
     /// Converts a string unit (like KB, MB, GB) into its corresponding byte multiplier.
