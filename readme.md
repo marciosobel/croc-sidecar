@@ -45,7 +45,12 @@ async fn main() -> croc_sidecar::Result {
 
     let mut stream = croc.events()?;
     while let Some(event) = stream.next().await {
-        println!("{:?}", event);
+        match event {
+            croc_sidecar::CrocEvent::CodeGenerated(code) => println!("Code is: {code}"),
+            croc_sidecar::CrocEvent::Hashing(progress) => println!("Hashing: {}%", progress.percentage),
+            croc_sidecar::CrocEvent::Sending(progress) => println!("Sending: {}%", progress.percentage),
+            _ => {}
+        }
     }
     Ok(())
 }
