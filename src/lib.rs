@@ -17,20 +17,32 @@
 //! }
 //! ```
 //!
+//! To receive a file using a code:
+//!
+//! ```no_run,standalone_crate
+//! # use croc_sidecar::Croc;
+//! fn main() -> croc_sidecar::Result {
+//!     let croc = Croc::new()
+//!         .receive()
+//!         .spawn("my-custom-code")?;
+//! #   Ok(())
+//! }
+//! ```
+//!
 //! You can also listen to `events`:
 //!
-//! ```compile_fail,standalone_crate
+//! ```no_run,standalone_crate
 //! # use futures_util::StreamExt;
 //! # use croc_sidecar::Croc;
 //! # #[tokio::main]
 //! # async fn main() -> croc_sidecar::Result {
-//!     let mut croc = Croc::new().send().file("file.rs").spawn()?;
+//! let mut croc = Croc::new().send().file("file.rs").spawn()?;
 //!
-//!     let mut stream = croc.events()?;
-//!     while let Some(event) = stream.next().await {
-//!         // do something with `event`...
-//!     }
-//! #   Ok(())
+//! let mut stream = croc.events()?;
+//! while let Some(event) = stream.next().await {
+//!     // do something with `event`...
+//! }
+//! # Ok(())
 //! # }
 //! ```
 pub mod croc;
