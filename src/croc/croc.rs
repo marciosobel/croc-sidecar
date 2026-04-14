@@ -2,7 +2,7 @@ use std::{ffi::OsStr, net::IpAddr, process::Stdio};
 
 use tokio::process::Command;
 
-use crate::croc::receive::CrocReceive;
+use crate::croc::{ClipboardKind, EncryptionCurve, Relay, receive::CrocReceive};
 
 use super::send::CrocSend;
 
@@ -34,43 +34,6 @@ pub struct Croc {
     relay: Option<Relay>,
     /// The password of the relay.
     pass: Option<String>,
-}
-
-/// Settings about the `croc` instance copying the code to the system clipboard.
-#[derive(Debug, Default)]
-pub enum ClipboardKind {
-    /// The code will not be copied automatically by `croc`.
-    Disabled,
-    /// The code will be copied automatically by `croc`.
-    #[default]
-    Enabled,
-    /// The full `croc` command be copied automatically.
-    Extended,
-}
-
-/// Different encryption curves to be used by `croc`.
-#[derive(Debug, Default)]
-pub enum EncryptionCurve {
-    /// The `p521` encryption curve.
-    P521,
-    /// The `p256` encryption curve.
-    #[default]
-    P256,
-    /// The `p384` encryption curve.
-    P384,
-    /// The `siec` encryption curve.
-    Siec,
-    /// The `ed25519` encryption curve.
-    Ed25519,
-}
-
-/// A representation of a relay for `croc`.
-#[derive(Debug)]
-struct Relay {
-    /// The IP address of the relay.
-    address: IpAddr,
-    /// The port of the relay.
-    port: u16,
 }
 
 impl Croc {
@@ -256,7 +219,7 @@ impl Croc {
             self.inner.arg(format!("--ip={}", address));
         }
         if let Some(ref relay) = self.relay {
-            let key = match relay.address() {
+            let key = match relay.address {
                 IpAddr::V4(_) => "CROC_RELAY",
                 IpAddr::V6(_) => "CROC_RELAY6",
             };
@@ -281,30 +244,6 @@ impl Croc {
             ref curve => {
                 self.inner.arg(format!("--curve={}", curve));
             }
-        }
-    }
-}
-
-impl Relay {
-    /// Creates a new `Relay`.
-    pub fn new<Ip: Into<IpAddr>>(address: Ip, port: u16) -> Self {
-        Self {
-            address: address.into(),
-            port,
-        }
-    }
-
-    /// The address of the `Relay`.
-    pub fn address(&self) -> &IpAddr {
-        &self.address
-    }
-}
-
-impl Into<ClipboardKind> for bool {
-    fn into(self) -> ClipboardKind {
-        match self {
-            true => ClipboardKind::Enabled,
-            false => ClipboardKind::Disabled,
         }
     }
 }
@@ -337,26 +276,5 @@ impl Default for Croc {
 impl std::fmt::Debug for Croc {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.inner.fmt(f)
-    }
-}
-
-impl std::fmt::Display for EncryptionCurve {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            EncryptionCurve::P521 => write!(f, "p521"),
-            EncryptionCurve::P256 => write!(f, "p256"),
-            EncryptionCurve::P384 => write!(f, "p384"),
-            EncryptionCurve::Siec => write!(f, "siec"),
-            EncryptionCurve::Ed25519 => write!(f, "ed25519"),
-        }
-    }
-}
-
-impl std::fmt::Display for Relay {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self.address {
-            IpAddr::V4(address) => write!(f, "{}:{}", address, self.port),
-            IpAddr::V6(address) => write!(f, "[{}]:{}", address, self.port),
-        }
     }
 }

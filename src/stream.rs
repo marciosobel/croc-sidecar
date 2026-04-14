@@ -4,7 +4,7 @@ use std::{
 };
 
 use futures_util::Stream;
-use tokio::{io::BufReader, pin, process::ChildStderr};
+use tokio::{io::BufReader, process::ChildStderr};
 
 use crate::{CrocChild, CrocEvent, CrocParser, Error, Result};
 
@@ -26,11 +26,8 @@ impl CrocEventStream {
 impl Stream for CrocEventStream {
     type Item = CrocEvent;
 
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        let future = self.parser.parse_next_event();
-        pin!(future);
-
-        match future.poll(cx) {
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        match self.get_mut().parser.poll_next_event(cx) {
             Poll::Ready(Ok(event)) => {
                 if matches!(event, CrocEvent::EOF) {
                     Poll::Ready(None)
