@@ -1,7 +1,11 @@
 use std::net::IpAddr;
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 /// A representation of a relay for `croc`.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Relay {
     /// The IP address of the relay.
     pub address: IpAddr,

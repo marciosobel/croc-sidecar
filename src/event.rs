@@ -1,7 +1,11 @@
 use crate::croc::Relay;
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 /// Represents progress of an ongoing operation.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Progress {
     /// The name of the file being processed.
     pub file_name: String,
@@ -17,6 +21,7 @@ pub struct Progress {
 
 /// Represents information about a file being transferred.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct FileInfo {
     /// The name of the file.
     pub name: String,
@@ -26,6 +31,7 @@ pub struct FileInfo {
 
 /// A collection representing an event that happened in the running `croc` application.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum CrocEvent {
     /// A hashing operation is in progress.
     Hashing(Progress),
