@@ -35,10 +35,7 @@ impl Stream for CrocEventStream {
                     Poll::Ready(Some(event))
                 }
             }
-            Poll::Ready(Err(error)) => match error {
-                Error::IoError(error) => Poll::Ready(Some(error.into())),
-                Error::NoStderr => unreachable!(),
-            },
+            Poll::Ready(Err(_)) => Poll::Ready(None),
             Poll::Pending => Poll::Pending,
         }
     }

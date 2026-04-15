@@ -1,5 +1,3 @@
-use tokio::io;
-
 use crate::croc::Relay;
 
 /// Represents progress of an ongoing operation.
@@ -27,7 +25,7 @@ pub struct FileInfo {
 }
 
 /// A collection representing an event that happened in the running `croc` application.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum CrocEvent {
     /// A hashing operation is in progress.
     Hashing(Progress),
@@ -51,12 +49,4 @@ pub enum CrocEvent {
     Unknown(String),
     /// The process has reached EOF.
     EOF,
-    /// An IO error occurred while parsing the line.
-    IoError(io::Error),
-}
-
-impl From<io::Error> for CrocEvent {
-    fn from(value: io::Error) -> Self {
-        Self::IoError(value)
-    }
 }
