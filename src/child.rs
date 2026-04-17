@@ -34,8 +34,18 @@ impl CrocChild {
     }
 
     /// Tries to kill the running Croc instance.
-    pub async fn kill(mut self) -> io::Result<()> {
+    pub async fn kill(&mut self) -> io::Result<()> {
         self.inner.kill().await
+    }
+
+    /// Attempts to kill the running Croc instance syncronously.
+    pub fn try_kill(&mut self) -> io::Result<()> {
+        let exited = self.inner.try_wait()?;
+        if exited.is_none() {
+            self.inner.start_kill()?;
+        }
+
+        Ok(())
     }
 
     /// Gets the running child ID.
