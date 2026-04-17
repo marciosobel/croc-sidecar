@@ -34,12 +34,18 @@ impl CrocChild {
     }
 
     /// Tries to kill the running Croc instance.
-    pub async fn kill(&mut self) -> io::Result<()> {
+    pub async fn kill(mut self) -> io::Result<()> {
         self.inner.kill().await
     }
 
     /// Gets the running child ID.
     pub fn id(&self) -> Option<u32> {
         self.inner.id()
+    }
+}
+
+impl std::fmt::Debug for CrocChild {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.inner.fmt(f)
     }
 }
