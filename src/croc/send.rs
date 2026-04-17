@@ -1,17 +1,19 @@
+use std::path::Path;
+
 use tokio::process::Command;
 
 use super::code::Code;
 use crate::{CrocChild, Result};
 
 /// A wrapper for the `croc` `send` command.
-pub struct CrocSend<F>
+pub struct CrocSend<P>
 where
-    F: AsRef<str>,
+    P: AsRef<Path>,
 {
     /// The inner `croc` command.
     inner: Command,
     /// The files to be sent.
-    files: Vec<F>,
+    files: Vec<P>,
     /// Whether or not `croc` should zip the files before sending.
     zip: bool,
     /// The codephrase to be used.
@@ -29,7 +31,7 @@ where
     /// Number of ports to use for transfers.
     transfers: u8,
     /// Files to be excluded.
-    excluded_files: Vec<F>,
+    excluded_files: Vec<P>,
 }
 
 /// A collection of hash algorithms to be used by `croc`.
@@ -44,9 +46,9 @@ pub enum HashKind {
     Md5,
 }
 
-impl<F> CrocSend<F>
+impl<P> CrocSend<P>
 where
-    F: AsRef<str>,
+    P: AsRef<Path>,
 {
     /// Creates a new `croc` `send` command.
     pub(crate) fn new(mut inner: Command) -> Self {
@@ -116,7 +118,7 @@ where
     }
 
     /// Adds a new file to be excluded when sending.
-    pub fn exclude(mut self, file: F) -> Self {
+    pub fn exclude(mut self, file: P) -> Self {
         self.excluded_files.push(file);
         self
     }
@@ -124,14 +126,14 @@ where
     /// Adds an iterator of files to be excluded when sending.
     pub fn exclude_many<I>(mut self, files: I) -> Self
     where
-        I: IntoIterator<Item = F>,
+        I: IntoIterator<Item = P>,
     {
         self.excluded_files.extend(files);
         self
     }
 
     /// Adds a file to send.
-    pub fn file(mut self, file: F) -> Self {
+    pub fn file(mut self, file: P) -> Self {
         self.files.push(file);
         self
     }
@@ -139,7 +141,7 @@ where
     /// Adds an iterator of files to send.
     pub fn files<I>(mut self, files: I) -> Self
     where
-        I: IntoIterator<Item = F>,
+        I: IntoIterator<Item = P>,
     {
         self.files.extend(files);
         self
@@ -182,8 +184,15 @@ where
             self.inner.env("CROC_SECRET", code);
         }
 
-        for file in &self.excluded_files {
-            self.inner.arg(format!("--exclude={}", file.as_ref()));
+        if !self.excluded_files.is_empty() {
+            let files = self
+                .excluded_files
+                .iter()
+                .map(|p| p.as_ref().to_string_lossy())
+                .collect::<Vec<_>>()
+                .join(",");
+
+            self.inner.arg(format!("--exclude={}", files));
         }
     }
 }
@@ -198,7 +207,10 @@ impl std::fmt::Display for HashKind {
     }
 }
 
-impl<F: AsRef<str>> std::fmt::Debug for CrocSend<F> {
+impl<P> std::fmt::Debug for CrocSend<P>
+where
+    P: AsRef<Path>,
+{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.inner.fmt(f)
     }

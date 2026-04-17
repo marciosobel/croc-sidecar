@@ -1,4 +1,4 @@
-use std::{ffi::OsStr, net::IpAddr, process::Stdio};
+use std::{net::IpAddr, path::Path, process::Stdio};
 
 use tokio::process::Command;
 
@@ -43,8 +43,8 @@ impl Croc {
     }
 
     /// Creates a [`Croc`] builder with the provided executable name.
-    pub fn new_with_path<P: AsRef<OsStr>>(name: P) -> Self {
-        let inner = Command::new(name);
+    pub fn new_with_path<P: AsRef<Path>>(name: P) -> Self {
+        let inner = Command::new(name.as_ref().as_os_str());
 
         let croc = Self {
             inner,
@@ -181,7 +181,10 @@ impl Croc {
     }
 
     /// Sets up croc to send files.
-    pub fn send<F: AsRef<str>>(mut self) -> CrocSend<F> {
+    pub fn send<P>(mut self) -> CrocSend<P>
+    where
+        P: AsRef<Path>,
+    {
         self.parse_options();
         CrocSend::new(self.inner)
     }
