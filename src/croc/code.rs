@@ -10,6 +10,6 @@ pub enum Code {
 
 impl<S: ToString> From<S> for Code {
     fn from(value: S) -> Self {
-        Self::Custom(value.to_string())
+        Self::Custom(value.to_string().trim().to_owned())
     }
 }

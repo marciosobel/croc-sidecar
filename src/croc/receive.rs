@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tokio::process::Command;
 
 use crate::{CrocChild, Result};
@@ -17,31 +17,32 @@ impl CrocReceive {
     pub(crate) fn new(inner: Command) -> Self {
         Self {
             inner,
-            overwrite: true,
+            overwrite: false,
             out: None,
         }
     }
 
-    /// Removes the prompt to overwrite or resume if file is already present. (Default: `true`)
+    /// Removes the prompt to overwrite or resume if file is already present. (Default: `false`)
     pub fn overwrite(mut self, value: bool) -> Self {
         self.overwrite = value;
         self
     }
 
     /// Sets the output folder to receive the file.
-    pub fn out(mut self, path: PathBuf) -> Self {
+    pub fn out<P: AsRef<Path>>(mut self, path: P) -> Self {
+        let path = path.as_ref();
         if path.is_dir() {
-            self.out = Some(path);
+            self.out = Some(path.to_owned());
         } else {
-            self.out = path.parent().map(Into::into);
+            self.out = path.parent().map(ToOwned::to_owned);
         }
         self
     }
 
     /// Resolve all send settings and spawns the `Croc` command.
-    pub fn spawn<S: ToString>(mut self, code: S) -> Result<CrocChild> {
+    pub fn spawn<C: AsRef<str>>(mut self, code: C) -> Result<CrocChild> {
         self.parse_options();
-        self.set_receive_code(code.to_string());
+        self.set_receive_code(code.as_ref());
         self.inner.spawn().map(CrocChild::new).map_err(Into::into)
     }
 
@@ -57,12 +58,12 @@ impl CrocReceive {
     }
 
     /// Sets the receive code for `croc`.
-    fn set_receive_code(&mut self, code: String) {
+    fn set_receive_code(&mut self, code: &str) {
         #[cfg(target_os = "windows")]
-        self.inner.arg(code);
+        self.inner.arg(code.trim());
 
         #[cfg(not(target_os = "windows"))]
-        self.inner.env("CROC_SECRET", code);
+        self.inner.env("CROC_SECRET", code.trim());
     }
 }
 

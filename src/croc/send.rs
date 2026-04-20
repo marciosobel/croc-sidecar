@@ -76,7 +76,7 @@ where
     }
 
     /// Sets a custom code to be used when sending files.
-    pub fn code<S: ToString>(mut self, code: S) -> Self {
+    pub fn code<C: Into<Code>>(mut self, code: C) -> Self {
         self.code = code.into();
         self
     }

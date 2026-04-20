@@ -56,6 +56,8 @@ async fn main() -> croc_sidecar::Result {
 }
 ```
 
+You can check for more examples in the [`examples`](examples/) directory.
+
 ---
 
 This project does not own or maintain [`croc`]. Support the original project [here](https://github.com/sponsors/schollz).
