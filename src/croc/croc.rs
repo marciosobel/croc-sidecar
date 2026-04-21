@@ -260,7 +260,7 @@ trait DisableWindow {
 impl DisableWindow for Command {
     fn disable_window(&mut self) {
         #[cfg(target_os = "windows")]
-        std::os::windows::process::CommandExt::creation_flags(self, 0x08000000);
+        self.creation_flags(0x08000000);
     }
 }
 

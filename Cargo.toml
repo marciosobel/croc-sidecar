@@ -1,6 +1,6 @@
 [package]
 name = "croc-sidecar"
-version = "0.2.7"
+version = "0.2.8"
 authors = ["Márcio Sobel"]
 description = "A wrapper for the Croc binary"
 repository = "https://github.com/marciosobel/croc-sidecar"
